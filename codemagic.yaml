@@ -36,7 +36,7 @@ workflows:
       - name: Upload to App Store Connect
         script: |
           mkdir -p ~/.private_keys
-          echo $APP_STORE_CONNECT_PRIVATE_KEY > ~/.private_keys/AuthKey_$APP_STORE_CONNECT_KEY_IDENTIFIER.p8
+          printf "%s" "$APP_STORE_CONNECT_PRIVATE_KEY" > ~/.private_keys/AuthKey_$APP_STORE_CONNECT_KEY_IDENTIFIER.p8
           xcrun altool --upload-app \
             -f build/ipa/rinne_watch.ipa \
             -t watchos \

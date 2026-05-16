@@ -1,0 +1,31 @@
+workflows:
+  watchos-app-store:
+    name: watchOS App Store
+    instance_type: mac_mini_m2
+    environment:
+      xcode: 16.2
+      cocoapods: default
+    scripts:
+      - name: Archive
+        script: |
+          xcodebuild archive \
+            -project "rinne_watch.xcodeproj" \
+            -scheme "rinne_watch Watch App" \
+            -configuration Release \
+            -destination "generic/platform=watchOS" \
+            -archivePath build/rinne_watch.xcarchive \
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM=6736RV7AWW
+      - name: Export
+        script: |
+          xcodebuild -exportArchive \
+            -archivePath build/rinne_watch.xcarchive \
+            -exportOptionsPlist ExportOptions.plist \
+            -exportPath build/export
+    artifacts:
+      - build/export/*.ipa
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID

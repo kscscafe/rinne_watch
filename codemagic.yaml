@@ -6,9 +6,6 @@ workflows:
       xcode: 16.2
       groups:
         - app_store_connect
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.officees.rinnewatch
     scripts:
       - name: Archive
         script: |
@@ -18,16 +15,16 @@ workflows:
             -configuration Release \
             -destination "generic/platform=watchOS" \
             -archivePath build/rinne_watch.xcarchive \
-            CODE_SIGN_STYLE=Automatic \
-            DEVELOPMENT_TEAM=6736RV7AWW \
-            -allowProvisioningUpdates
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER=rinne_watch_appstore \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM=6736RV7AWW
       - name: Export
         script: |
           xcodebuild -exportArchive \
             -archivePath build/rinne_watch.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
-            -exportPath build/export \
-            -allowProvisioningUpdates
+            -exportPath build/export
     artifacts:
       - build/export/*.ipa
     publishing:

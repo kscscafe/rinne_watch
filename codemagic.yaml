@@ -30,16 +30,12 @@ workflows:
             PROVISIONING_PROFILE_SPECIFIER=rinne_watch_appstore \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             DEVELOPMENT_TEAM=6736RV7AWW
-      - name: Export
+      - name: Upload to App Store Connect
         script: |
-          xcodebuild -exportArchive \
-            -archivePath build/rinne_watch.xcarchive \
-            -exportOptionsPlist ExportOptions.plist \
-            -exportPath build/export
+          app-store-connect publish \
+            --path build/rinne_watch.xcarchive \
+            --api-key $APP_STORE_CONNECT_KEY_IDENTIFIER \
+            --issuer-id $APP_STORE_CONNECT_ISSUER_ID \
+            --private-key $APP_STORE_CONNECT_PRIVATE_KEY
     artifacts:
-      - build/export/*.ipa
-    publishing:
-      app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+      - build/rinne_watch.xcarchive

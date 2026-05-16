@@ -9,13 +9,14 @@ workflows:
     scripts:
       - name: Set up keychain
         script: keychain initialize
-      - name: Fetch signing files
-        script: |
-          app-store-connect fetch-signing-files com.officees.rinnewatch \
-            --type IOS_APP_STORE \
-            --create
       - name: Add certs to keychain
         script: keychain add-certificates
+      - name: Install provisioning profile
+        script: |
+          PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_HOME"
+          PROFILE_LIST=$(app-store-connect list-profiles --type IOS_APP_STORE --bundle-id-identifier com.officees.rinnewatch --profile-state ACTIVE)
+          echo "$PROFILE_LIST"
       - name: Archive
         script: |
           xcodebuild archive \
@@ -24,16 +25,16 @@ workflows:
             -configuration Release \
             -destination "generic/platform=watchOS" \
             -archivePath build/rinne_watch.xcarchive \
-            CODE_SIGN_STYLE=Manual \
-            PROVISIONING_PROFILE_SPECIFIER=rinne_watch_appstore \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            DEVELOPMENT_TEAM=6736RV7AWW
+            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM=6736RV7AWW \
+            -allowProvisioningUpdates
       - name: Export
         script: |
           xcodebuild -exportArchive \
             -archivePath build/rinne_watch.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
-            -exportPath build/export
+            -exportPath build/export \
+            -allowProvisioningUpdates
     artifacts:
       - build/export/*.ipa
     publishing:

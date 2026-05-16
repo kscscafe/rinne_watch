@@ -5,6 +5,8 @@ workflows:
     environment:
       xcode: 16.2
       cocoapods: default
+      groups:
+        - app_store_connect
     scripts:
       - name: Archive
         script: |
@@ -15,13 +17,15 @@ workflows:
             -destination "generic/platform=watchOS" \
             -archivePath build/rinne_watch.xcarchive \
             CODE_SIGN_STYLE=Automatic \
-            DEVELOPMENT_TEAM=6736RV7AWW
+            DEVELOPMENT_TEAM=6736RV7AWW \
+            -allowProvisioningUpdates
       - name: Export
         script: |
           xcodebuild -exportArchive \
             -archivePath build/rinne_watch.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
-            -exportPath build/export
+            -exportPath build/export \
+            -allowProvisioningUpdates
     artifacts:
       - build/export/*.ipa
     publishing:

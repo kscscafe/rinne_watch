@@ -4,9 +4,11 @@ workflows:
     instance_type: mac_mini_m2
     environment:
       xcode: 16.2
-      cocoapods: default
       groups:
         - app_store_connect
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.officees.rinnewatch
     scripts:
       - name: Archive
         script: |

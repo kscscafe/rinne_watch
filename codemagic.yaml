@@ -9,15 +9,15 @@ workflows:
     scripts:
       - name: Set up keychain
         script: keychain initialize
-      - name: Add certs to keychain
+      - name: Add cert to keychain
         script: |
           echo $CERTIFICATE_PRIVATE_KEY | base64 --decode > /tmp/cert.p12
           keychain add-certificates --certificate /tmp/cert.p12 --certificate-password 1234
       - name: Install provisioning profile
         script: |
-          PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
-          mkdir -p "$PROFILES_HOME"
-          cp /Users/builder/clone/rinne_watch_appstore.mobileprovision "$PROFILES_HOME/" 2>/dev/null || true
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          UUID=$(security cms -D -i rinne_watch_appstore.mobileprovision | plutil -extract UUID raw -)
+          cp rinne_watch_appstore.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/${UUID}.mobileprovision"
       - name: Archive
         script: |
           xcodebuild archive \
@@ -26,16 +26,16 @@ workflows:
             -configuration Release \
             -destination "generic/platform=watchOS" \
             -archivePath build/rinne_watch.xcarchive \
-            CODE_SIGN_STYLE=Automatic \
-            DEVELOPMENT_TEAM=6736RV7AWW \
-            -allowProvisioningUpdates
+            CODE_SIGN_STYLE=Manual \
+            PROVISIONING_PROFILE_SPECIFIER=rinne_watch_appstore \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM=6736RV7AWW
       - name: Export
         script: |
           xcodebuild -exportArchive \
             -archivePath build/rinne_watch.xcarchive \
             -exportOptionsPlist ExportOptions.plist \
-            -exportPath build/export \
-            -allowProvisioningUpdates
+            -exportPath build/export
     artifacts:
       - build/export/*.ipa
     publishing:

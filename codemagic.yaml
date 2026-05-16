@@ -18,7 +18,7 @@ workflows:
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           UUID=$(security cms -D -i rinne_watch_appstore.mobileprovision | plutil -extract UUID raw -)
           cp rinne_watch_appstore.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/${UUID}.mobileprovision"
-      - name: Archive and Export IPA
+      - name: Archive
         script: |
           xcodebuild archive \
             -project "rinne_watch.xcodeproj" \
@@ -30,9 +30,12 @@ workflows:
             PROVISIONING_PROFILE_SPECIFIER=rinne_watch_appstore \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             DEVELOPMENT_TEAM=6736RV7AWW
-          mkdir -p build/ipa
-          cd build/rinne_watch.xcarchive/Products/Applications
-          zip -r "$CM_BUILD_DIR/build/ipa/rinne_watch.ipa" .
+      - name: Create IPA
+        script: |
+          mkdir -p build/ipa/Payload
+          cp -r build/rinne_watch.xcarchive/Products/Applications/*.app build/ipa/Payload/
+          cd build/ipa
+          zip -r rinne_watch.ipa Payload
       - name: Upload to App Store Connect
         script: |
           mkdir -p ~/.private_keys
@@ -43,4 +46,4 @@ workflows:
             --apiKey $APP_STORE_CONNECT_KEY_IDENTIFIER \
             --apiIssuer $APP_STORE_CONNECT_ISSUER_ID
     artifacts:
-      - build/ipa/*.ipa
+      - build/ipa/rinne_watch.ipa

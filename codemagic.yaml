@@ -10,13 +10,14 @@ workflows:
       - name: Set up keychain
         script: keychain initialize
       - name: Add certs to keychain
-        script: keychain add-certificates
+        script: |
+          echo $CERTIFICATE_PRIVATE_KEY | base64 --decode > /tmp/cert.p12
+          keychain add-certificates --certificate /tmp/cert.p12 --certificate-password 1234
       - name: Install provisioning profile
         script: |
           PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PROFILES_HOME"
-          PROFILE_LIST=$(app-store-connect list-profiles --type IOS_APP_STORE --bundle-id-identifier com.officees.rinnewatch --profile-state ACTIVE)
-          echo "$PROFILE_LIST"
+          cp /Users/builder/clone/rinne_watch_appstore.mobileprovision "$PROFILES_HOME/" 2>/dev/null || true
       - name: Archive
         script: |
           xcodebuild archive \

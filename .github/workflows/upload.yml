@@ -48,7 +48,7 @@ jobs:
             DEVELOPMENT_TEAM=6736RV7AWW \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]=rinne_ios_appstore \
-            PROVISIONING_PROFILE_SPECIFIER[sdk=watchos*]=d70f0a8f-b889-4811-b778-a650a27c1512
+            PROVISIONING_PROFILE_SPECIFIER[sdk=watchos*]=rinne_watch_appstore
       - name: Verify archive
         run: |
           ls -la build/rinne_iOS.xcarchive/Products/Applications/

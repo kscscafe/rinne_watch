@@ -38,7 +38,9 @@ jobs:
             CODE_SIGN_IDENTITY="Apple Distribution" \
             DEVELOPMENT_TEAM=6736RV7AWW \
             -skipPackagePluginValidation \
-            VALIDATE_WORKSPACE=NO
+            VALIDATE_WORKSPACE=NO \
+            SDKROOT=watchos \
+            SUPPORTED_PLATFORMS=watchos
       - name: Export IPA
         run: |
           cat > /tmp/ExportOptions.plist << 'EOF'

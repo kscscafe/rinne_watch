@@ -36,7 +36,9 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             PROVISIONING_PROFILE_SPECIFIER=rinne_watch_appstore \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            DEVELOPMENT_TEAM=6736RV7AWW
+            DEVELOPMENT_TEAM=6736RV7AWW \
+            -skipPackagePluginValidation \
+            VALIDATE_WORKSPACE=NO
       - name: Export IPA
         run: |
           cat > /tmp/ExportOptions.plist << 'EOF'

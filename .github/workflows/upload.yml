@@ -1,24 +1,21 @@
 name: Upload to App Store
-
 on:
   workflow_dispatch:
-
 jobs:
   upload:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-
-      - name: Select Xcode 16
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app
-
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.2.app || \
+          sudo xcode-select -s $(ls -d /Applications/Xcode*.app | tail -1)
       - name: Install provisioning profile
         run: |
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           echo "${{ secrets.PROVISIONING_PROFILE }}" | base64 --decode > /tmp/profile.mobileprovision
           UUID=$(security cms -D -i /tmp/profile.mobileprovision | plutil -extract UUID raw -)
           cp /tmp/profile.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/${UUID}.mobileprovision"
-
       - name: Import certificate
         run: |
           echo "${{ secrets.CERTIFICATE_P12 }}" | base64 --decode > /tmp/cert.p12
@@ -28,7 +25,6 @@ jobs:
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
           security set-keychain-settings build.keychain
-
       - name: Archive
         run: |
           xcodebuild archive \
@@ -41,19 +37,39 @@ jobs:
             PROVISIONING_PROFILE_SPECIFIER=rinne_watch_appstore \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             DEVELOPMENT_TEAM=6736RV7AWW
-
-      - name: Create IPA
+      - name: Export IPA
         run: |
-          mkdir -p build/ipa/Payload
-          cp -r build/rinne_watch.xcarchive/Products/Applications/*.app build/ipa/Payload/
-          cd build/ipa && zip -r rinne_watch.ipa Payload
-
+          cat > /tmp/ExportOptions.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>teamID</key>
+            <string>6736RV7AWW</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.officees.rinnewatch</key>
+              <string>rinne_watch_appstore</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath build/rinne_watch.xcarchive \
+            -exportPath build/export \
+            -exportOptionsPlist /tmp/ExportOptions.plist
       - name: Upload to App Store Connect
         run: |
           mkdir -p ~/.private_keys
           printf "%s" "${{ secrets.APP_STORE_KEY }}" > ~/.private_keys/AuthKey_${{ secrets.APP_STORE_KEY_ID }}.p8
-          xcrun altool --upload-app \
-            -f build/ipa/rinne_watch.ipa \
-            -t watchos \
+          xcrun altool --upload-package build/export/*.ipa \
+            --apple-id 6770054069 \
+            --bundle-id com.officees.rinnewatch \
+            --bundle-version 1 \
+            --bundle-short-version-string 1.0.0 \
             --apiKey ${{ secrets.APP_STORE_KEY_ID }} \
             --apiIssuer ${{ secrets.APP_STORE_ISSUER_ID }}

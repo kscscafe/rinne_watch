@@ -36,6 +36,11 @@ jobs:
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
           security set-keychain-settings build.keychain
+      - name: Prepare App Store Connect API key
+        run: |
+          mkdir -p ~/.private_keys
+          printf "%s" "${{ secrets.APP_STORE_KEY }}" > ~/.private_keys/AuthKey_${{ secrets.APP_STORE_KEY_ID }}.p8
+          ls -la ~/.private_keys/
       - name: Archive iOS app (embeds watchOS)
         run: |
           xcodebuild archive \
@@ -45,11 +50,11 @@ jobs:
             -destination "generic/platform=iOS" \
             -archivePath build/rinne_iOS.xcarchive \
             -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.private_keys/AuthKey_${{ secrets.APP_STORE_KEY_ID }}.p8 \
+            -authenticationKeyID ${{ secrets.APP_STORE_KEY_ID }} \
+            -authenticationKeyIssuerID ${{ secrets.APP_STORE_ISSUER_ID }} \
             DEVELOPMENT_TEAM=6736RV7AWW \
-            CODE_SIGN_STYLE[sdk=iphoneos*]=Manual \
-            CODE_SIGN_IDENTITY[sdk=iphoneos*]="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]=rinne_ios_appstore \
-            CODE_SIGN_STYLE[sdk=watchos*]=Automatic
+            CODE_SIGN_STYLE=Automatic
       - name: Verify archive
         run: |
           ls -la build/rinne_iOS.xcarchive/Products/Applications/

@@ -11,12 +11,25 @@ jobs:
           ls /Applications/Xcode*.app
           sudo xcode-select -s $(ls -d /Applications/Xcode*.app | sort -V | tail -1)
           xcodebuild -version
-      - name: Install provisioning profile
+      - name: Install provisioning profiles
         run: |
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
-          echo "${{ secrets.PROVISIONING_PROFILE }}" | base64 --decode > /tmp/profile.mobileprovision
-          UUID=$(security cms -D -i /tmp/profile.mobileprovision | plutil -extract UUID raw -)
-          cp /tmp/profile.mobileprovision "$HOME/Library/MobileDevice/Provisioning Profiles/${UUID}.mobileprovision"
+          install_profile() {
+            local b64="$1"
+            local label="$2"
+            if [ -z "$b64" ]; then
+              echo "Skipping $label: secret is empty"
+              return 0
+            fi
+            local tmp="/tmp/${label}.mobileprovision"
+            echo "$b64" | base64 --decode > "$tmp"
+            local uuid
+            uuid=$(security cms -D -i "$tmp" | plutil -extract UUID raw -)
+            cp "$tmp" "$HOME/Library/MobileDevice/Provisioning Profiles/${uuid}.mobileprovision"
+            echo "Installed $label as ${uuid}.mobileprovision"
+          }
+          install_profile "${{ secrets.IOS_PROVISIONING_PROFILE }}" "rinne_ios_appstore"
+          install_profile "${{ secrets.WATCH_PROVISIONING_PROFILE }}" "rinne_watch_appstore"
       - name: Import certificate
         run: |
           echo "${{ secrets.CERTIFICATE_P12 }}" | base64 --decode > /tmp/cert.p12
@@ -26,18 +39,24 @@ jobs:
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
           security set-keychain-settings build.keychain
-      - name: Archive
+      - name: Archive iOS app (embeds watchOS)
         run: |
           xcodebuild archive \
             -project "rinne_watch.xcodeproj" \
-            -scheme "rinne_watch Watch App" \
+            -scheme "rinne_iOS" \
             -configuration Release \
-            -destination "generic/platform=watchOS" \
-            -archivePath build/rinne_watch.xcarchive \
+            -destination "generic/platform=iOS" \
+            -archivePath build/rinne_iOS.xcarchive \
             CODE_SIGN_STYLE=Manual \
-            PROVISIONING_PROFILE_SPECIFIER=rinne_watch_appstore \
+            DEVELOPMENT_TEAM=6736RV7AWW \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            DEVELOPMENT_TEAM=6736RV7AWW
+            PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]=rinne_ios_appstore \
+            PROVISIONING_PROFILE_SPECIFIER[sdk=watchos*]=rinne_watch_appstore
+      - name: Verify archive
+        run: |
+          ls -la build/rinne_iOS.xcarchive/Products/Applications/
+          echo "Embedded watch app:"
+          ls -la "build/rinne_iOS.xcarchive/Products/Applications/Rinne Sleep.app/Watch/" || true
       - name: Export IPA
         run: |
           cat > /tmp/ExportOptions.plist << 'EOF'
@@ -51,26 +70,33 @@ jobs:
             <string>6736RV7AWW</string>
             <key>signingStyle</key>
             <string>manual</string>
+            <key>stripSwiftSymbols</key>
+            <true/>
+            <key>uploadSymbols</key>
+            <true/>
             <key>provisioningProfiles</key>
             <dict>
               <key>com.officees.rinnewatch</key>
+              <string>rinne_ios_appstore</string>
+              <key>com.officees.rinnewatch.watchkitapp</key>
               <string>rinne_watch_appstore</string>
             </dict>
           </dict>
           </plist>
           EOF
           xcodebuild -exportArchive \
-            -archivePath build/rinne_watch.xcarchive \
+            -archivePath build/rinne_iOS.xcarchive \
             -exportPath build/export \
             -exportOptionsPlist /tmp/ExportOptions.plist
+          ls -la build/export
       - name: Upload to App Store Connect
         run: |
           mkdir -p ~/.private_keys
           printf "%s" "${{ secrets.APP_STORE_KEY }}" > ~/.private_keys/AuthKey_${{ secrets.APP_STORE_KEY_ID }}.p8
-          xcrun altool --upload-package build/export/*.ipa \
-            --apple-id 6770054069 \
-            --bundle-id com.officees.rinnewatch \
-            --bundle-version 1 \
-            --bundle-short-version-string 1.0.0 \
+          IPA_PATH=$(ls build/export/*.ipa | head -n 1)
+          echo "Uploading: $IPA_PATH"
+          xcrun altool --upload-app \
+            -f "$IPA_PATH" \
+            -t ios \
             --apiKey ${{ secrets.APP_STORE_KEY_ID }} \
             --apiIssuer ${{ secrets.APP_STORE_ISSUER_ID }}

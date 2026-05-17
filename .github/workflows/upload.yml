@@ -8,8 +8,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Select Xcode
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.2.app || \
-          sudo xcode-select -s $(ls -d /Applications/Xcode*.app | tail -1)
+          ls /Applications/Xcode*.app
+          sudo xcode-select -s $(ls -d /Applications/Xcode*.app | sort -V | tail -1)
+          xcodebuild -version
       - name: Install provisioning profile
         run: |
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
@@ -36,11 +37,7 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             PROVISIONING_PROFILE_SPECIFIER=rinne_watch_appstore \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            DEVELOPMENT_TEAM=6736RV7AWW \
-            -skipPackagePluginValidation \
-            VALIDATE_WORKSPACE=NO \
-            SDKROOT=watchos \
-            SUPPORTED_PLATFORMS=watchos
+            DEVELOPMENT_TEAM=6736RV7AWW
       - name: Export IPA
         run: |
           cat > /tmp/ExportOptions.plist << 'EOF'
